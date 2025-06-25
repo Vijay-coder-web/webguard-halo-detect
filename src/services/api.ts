@@ -51,9 +51,22 @@ class HaloGuardAPI {
     };
   }
   
-  // Get scan history
+  // Get scan history - now uses localStorage for demo purposes
   getScanHistory(): ScanHistory[] {
-    // Mock data - in real app this would come from backend
+    try {
+      const stored = localStorage.getItem('haloguard_history');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.map((item: any) => ({
+          ...item,
+          timestamp: new Date(item.timestamp)
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading scan history:', error);
+    }
+    
+    // Return mock data if nothing in localStorage
     const mockHistory: ScanHistory[] = [
       {
         id: '1',
@@ -81,7 +94,34 @@ class HaloGuardAPI {
       }
     ];
     
+    // Store mock data for future use
+    this.saveScanHistory(mockHistory);
     return mockHistory;
+  }
+  
+  // Save scan history to localStorage
+  private saveScanHistory(history: ScanHistory[]): void {
+    try {
+      localStorage.setItem('haloguard_history', JSON.stringify(history));
+    } catch (error) {
+      console.error('Error saving scan history:', error);
+    }
+  }
+  
+  // Add new scan result to history
+  addScanResult(filename: string, type: 'image' | 'video', result: DetectionResult): void {
+    const newScan: ScanHistory = {
+      id: Date.now().toString(),
+      filename,
+      type,
+      verdict: result.isDeepfake ? 'deepfake' : 'authentic',
+      confidence: result.confidence,
+      timestamp: new Date()
+    };
+    
+    const currentHistory = this.getScanHistory();
+    const updatedHistory = [newScan, ...currentHistory].slice(0, 50); // Keep last 50 scans
+    this.saveScanHistory(updatedHistory);
   }
 }
 

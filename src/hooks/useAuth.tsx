@@ -19,7 +19,7 @@ export const useAuth = () => {
 
   return {
     user: authUser,
-    session: user ? { user } : null,
+    session: user ? { user: authUser } : null,
     login: async () => {
       // Clerk handles login through SignIn component
       throw new Error('Use SignIn component for login');

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Shield, LogIn, History, Menu, X } from 'lucide-react';
 import { SignedIn, SignedOut, UserButton } from '@clerk/clerk-react';
@@ -28,6 +27,10 @@ const Index = () => {
     try {
       const analysisResult = await api.detectDeepfake(file);
       setResult(analysisResult);
+      
+      // Add to scan history
+      const fileType = file.type.startsWith('image/') ? 'image' : 'video';
+      api.addScanResult(file.name, fileType, analysisResult);
     } catch (error) {
       console.error('Analysis failed:', error);
     } finally {
