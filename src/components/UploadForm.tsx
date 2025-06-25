@@ -13,8 +13,10 @@ const UploadForm: React.FC<UploadFormProps> = ({ onSubmit, isLoading = false }) 
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showWebcam, setShowWebcam] = useState(false);
+  const [webcamError, setWebcamError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -47,48 +49,77 @@ const UploadForm: React.FC<UploadFormProps> = ({ onSubmit, isLoading = false }) 
 
   const startWebcam = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setWebcamError(null);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        } 
+      });
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        streamRef.current = stream;
         setShowWebcam(true);
       }
     } catch (error) {
       console.error('Error accessing webcam:', error);
+      setWebcamError('Unable to access webcam. Please check permissions.');
     }
   };
 
   const capturePhoto = () => {
-    if (videoRef.current) {
+    if (videoRef.current && streamRef.current) {
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
+      
+      // Set canvas dimensions to match video
       canvas.width = videoRef.current.videoWidth;
       canvas.height = videoRef.current.videoHeight;
       
-      if (context) {
-        context.drawImage(videoRef.current, 0, 0);
+      if (context && canvas.width > 0 && canvas.height > 0) {
+        // Draw the video frame to canvas
+        context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        
+        // Convert to blob and create file
         canvas.toBlob((blob) => {
           if (blob) {
-            const file = new File([blob], 'webcam-capture.jpg', { type: 'image/jpeg' });
+            const file = new File([blob], `webcam-capture-${Date.now()}.jpg`, { 
+              type: 'image/jpeg' 
+            });
             setSelectedFile(file);
             stopWebcam();
           }
-        });
+        }, 'image/jpeg', 0.8);
       }
     }
   };
 
   const stopWebcam = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    
     setShowWebcam(false);
+    setWebcamError(null);
   };
 
   const handleSubmit = () => {
     if (selectedFile) {
       onSubmit(selectedFile);
+    }
+  };
+
+  const resetForm = () => {
+    setSelectedFile(null);
+    stopWebcam();
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -148,16 +179,31 @@ const UploadForm: React.FC<UploadFormProps> = ({ onSubmit, isLoading = false }) 
         </div>
       </div>
 
-      {/* Webcam Option */}
-      <div className="text-center">
-        <Button
-          variant="secondary"
-          onClick={showWebcam ? stopWebcam : startWebcam}
-          className="web-ripple"
-        >
-          <Camera className="w-4 h-4 mr-2" />
-          {showWebcam ? 'Stop Webcam' : 'Use Webcam'}
-        </Button>
+      {/* Webcam Controls */}
+      <div className="text-center space-y-4">
+        {!showWebcam ? (
+          <Button
+            variant="secondary"
+            onClick={startWebcam}
+            className="web-ripple"
+          >
+            <Camera className="w-4 h-4 mr-2" />
+            Use Webcam
+          </Button>
+        ) : (
+          <Button
+            variant="destructive"
+            onClick={stopWebcam}
+            className="web-ripple"
+          >
+            <X className="w-4 h-4 mr-2" />
+            Stop Webcam
+          </Button>
+        )}
+        
+        {webcamError && (
+          <p className="text-red-500 text-sm">{webcamError}</p>
+        )}
       </div>
 
       {/* Webcam Feed */}
@@ -167,9 +213,11 @@ const UploadForm: React.FC<UploadFormProps> = ({ onSubmit, isLoading = false }) 
             ref={videoRef}
             autoPlay
             playsInline
-            className="w-full rounded-lg"
+            muted
+            className="w-full rounded-lg bg-black"
+            style={{ maxHeight: '400px' }}
           />
-          <div className="flex justify-center mt-4">
+          <div className="flex justify-center mt-4 space-x-2">
             <Button onClick={capturePhoto} className="web-ripple">
               <SpiderIcon size={16} className="mr-2" />
               Capture Photo
@@ -194,20 +242,22 @@ const UploadForm: React.FC<UploadFormProps> = ({ onSubmit, isLoading = false }) 
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setSelectedFile(null)}
+              onClick={resetForm}
             >
               <X className="w-4 h-4" />
             </Button>
           </div>
           
-          <Button
-            onClick={handleSubmit}
-            className="w-full mt-4 web-ripple"
-            size="lg"
-          >
-            <SpiderIcon size={16} className="mr-2" />
-            Analyze for Deepfakes
-          </Button>
+          <div className="flex space-x-2 mt-4">
+            <Button
+              onClick={handleSubmit}
+              className="flex-1 web-ripple"
+              size="lg"
+            >
+              <SpiderIcon size={16} className="mr-2" />
+              Analyze for Deepfakes
+            </Button>
+          </div>
         </div>
       )}
     </div>

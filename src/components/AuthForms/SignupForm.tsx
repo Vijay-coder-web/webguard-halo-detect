@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mail, Lock, User, UserPlus } from 'lucide-react';
+import { Mail, Lock, User, UserPlus, AlertCircle } from 'lucide-react';
 import SpiderIcon from '../SpiderIcon';
 
 interface SignupFormProps {
-  onSubmit: (name: string, email: string, password: string) => void;
+  onSubmit: (name: string, email: string, password: string) => Promise<void>;
   onSwitchToLogin: () => void;
 }
 
@@ -16,10 +16,23 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSubmit, onSwitchToLogin }) =>
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(name, email, password);
+    if (isLoading) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await onSubmit(name, email, password);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Signup failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -33,6 +46,13 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSubmit, onSwitchToLogin }) =>
       </CardHeader>
       
       <CardContent>
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-md flex items-center space-x-2 text-red-700">
+            <AlertCircle className="w-4 h-4" />
+            <span className="text-sm">{error}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Full Name</Label>
@@ -46,6 +66,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSubmit, onSwitchToLogin }) =>
                 onChange={(e) => setName(e.target.value)}
                 className="pl-10 web-border"
                 required
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -62,6 +83,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSubmit, onSwitchToLogin }) =>
                 onChange={(e) => setEmail(e.target.value)}
                 className="pl-10 web-border"
                 required
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -78,14 +100,24 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSubmit, onSwitchToLogin }) =>
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-10 web-border"
                 required
-                minLength={8}
+                minLength={6}
+                disabled={isLoading}
               />
             </div>
           </div>
           
-          <Button type="submit" className="w-full web-ripple" size="lg">
-            <UserPlus className="w-4 h-4 mr-2" />
-            Create Account
+          <Button 
+            type="submit" 
+            className="w-full web-ripple" 
+            size="lg"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <SpiderIcon size={16} className="mr-2 animate-spin" />
+            ) : (
+              <UserPlus className="w-4 h-4 mr-2" />
+            )}
+            {isLoading ? 'Creating Account...' : 'Create Account'}
           </Button>
         </form>
         
@@ -95,6 +127,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSubmit, onSwitchToLogin }) =>
             <button
               onClick={onSwitchToLogin}
               className="text-primary hover:underline font-medium"
+              disabled={isLoading}
             >
               Sign in
             </button>
