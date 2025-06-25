@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Shield, LogIn, History, Menu, X } from 'lucide-react';
+import { SignedIn, SignedOut, UserButton } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
 import UploadForm from '@/components/UploadForm';
 import ResultDisplay from '@/components/ResultDisplay';
@@ -15,7 +16,7 @@ type ViewState = 'scanner' | 'history' | 'auth';
 type AuthMode = 'login' | 'signup';
 
 const Index = () => {
-  const { user, login, signup, logout } = useAuth();
+  const { user } = useAuth();
   const [currentView, setCurrentView] = useState<ViewState>('scanner');
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -36,24 +37,6 @@ const Index = () => {
 
   const handleNewScan = () => {
     setResult(null);
-  };
-
-  const handleLogin = async (email: string, password: string) => {
-    try {
-      await login(email, password);
-      setCurrentView('scanner');
-    } catch (error) {
-      console.error('Login failed:', error);
-    }
-  };
-
-  const handleSignup = async (name: string, email: string, password: string) => {
-    try {
-      await signup(name, email, password);
-      setCurrentView('scanner');
-    } catch (error) {
-      console.error('Signup failed:', error);
-    }
   };
 
   const handleRescan = (id: string) => {
@@ -87,7 +70,7 @@ const Index = () => {
               Scanner
             </Button>
             
-            {user && (
+            <SignedIn>
               <Button
                 variant={currentView === 'history' ? 'default' : 'ghost'}
                 onClick={() => setCurrentView('history')}
@@ -96,16 +79,9 @@ const Index = () => {
                 <History className="w-4 h-4 mr-2" />
                 History
               </Button>
-            )}
+            </SignedIn>
             
-            {user ? (
-              <div className="flex items-center space-x-3">
-                <span className="text-sm text-muted-foreground">Welcome, {user.name}</span>
-                <Button variant="outline" onClick={logout} className="web-ripple">
-                  Logout
-                </Button>
-              </div>
-            ) : (
+            <SignedOut>
               <Button
                 variant={currentView === 'auth' ? 'default' : 'outline'}
                 onClick={() => setCurrentView('auth')}
@@ -114,7 +90,11 @@ const Index = () => {
                 <LogIn className="w-4 h-4 mr-2" />
                 Sign In
               </Button>
-            )}
+            </SignedOut>
+            
+            <SignedIn>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
           </nav>
 
           {/* Mobile menu button */}
@@ -144,7 +124,7 @@ const Index = () => {
                 Scanner
               </Button>
               
-              {user && (
+              <SignedIn>
                 <Button
                   variant={currentView === 'history' ? 'default' : 'ghost'}
                   onClick={() => {
@@ -156,17 +136,9 @@ const Index = () => {
                   <History className="w-4 h-4 mr-2" />
                   History
                 </Button>
-              )}
+              </SignedIn>
               
-              {user ? (
-                <Button
-                  variant="outline"
-                  onClick={logout}
-                  className="w-full justify-start web-ripple"
-                >
-                  Logout ({user.name})
-                </Button>
-              ) : (
+              <SignedOut>
                 <Button
                   variant={currentView === 'auth' ? 'default' : 'ghost'}
                   onClick={() => {
@@ -178,7 +150,13 @@ const Index = () => {
                   <LogIn className="w-4 h-4 mr-2" />
                   Sign In
                 </Button>
-              )}
+              </SignedOut>
+              
+              <SignedIn>
+                <div className="px-4 py-2">
+                  <UserButton afterSignOutUrl="/" />
+                </div>
+              </SignedIn>
             </div>
           </div>
         )}
@@ -192,12 +170,10 @@ const Index = () => {
         <div className="min-h-screen bg-web-pattern flex items-center justify-center p-4">
           {authMode === 'login' ? (
             <LoginForm
-              onSubmit={handleLogin}
               onSwitchToSignup={() => setAuthMode('signup')}
             />
           ) : (
             <SignupForm
-              onSubmit={handleSignup}
               onSwitchToLogin={() => setAuthMode('login')}
             />
           )}

@@ -1,6 +1,4 @@
 
-import { supabase } from '@/integrations/supabase/client';
-
 // Mock API service for HaloGuard
 // In a real implementation, this would connect to actual deepfake detection APIs
 
@@ -84,61 +82,6 @@ class HaloGuardAPI {
     ];
     
     return mockHistory;
-  }
-  
-  // Authentication methods using Supabase
-  async login(email: string, password: string): Promise<{ token: string; user: any }> {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    if (!data.user || !data.session) {
-      throw new Error('Login failed');
-    }
-
-    return {
-      token: data.session.access_token,
-      user: {
-        id: data.user.id,
-        email: data.user.email,
-        name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User'
-      }
-    };
-  }
-  
-  async signup(name: string, email: string, password: string): Promise<{ token: string; user: any }> {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name: name
-        },
-        emailRedirectTo: `${window.location.origin}/`
-      }
-    });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    if (!data.user || !data.session) {
-      throw new Error('Signup failed');
-    }
-
-    return {
-      token: data.session.access_token,
-      user: {
-        id: data.user.id,
-        email: data.user.email,
-        name: name
-      }
-    };
   }
 }
 
